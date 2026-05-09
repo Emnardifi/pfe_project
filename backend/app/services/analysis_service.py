@@ -56,29 +56,22 @@ def _save_upload_file(upload_file, file_path: str):
 def _run_ai(image_path: str) -> tuple[str, float, str]:
     try:
         preprocessed_image = preprocess_image(image_path)
-        print("Preprocess OK")
-        
         prediction_data = predict_image(preprocessed_image)
+
         prediction = prediction_data["prediction"]
         probability = prediction_data["probability"]
-        print("Prediction OK:", prediction, probability)
 
-        '''os.makedirs("heatmaps", exist_ok=True)
-        heatmap_path = generate_gradcam(image_path,save_dir="heatmaps")
-        print("GradCAM OK:", heatmap_path)'''
-        '''heatmap_path = None
-        print("GradCAM skipped")'''
+        os.makedirs("heatmaps", exist_ok=True)
         heatmap_path = generate_gradcam(image_path, save_dir="heatmaps")
-        return prediction, probability, heatmap_path
+        heatmap_url = "/" + heatmap_path.replace("\\", "/")
+
+        return prediction, probability, heatmap_url
 
     except Exception as e:
-        print("AI ERROR:", repr(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"ai prediction failed: {str(e)}"
         )
-
-
 def create_analysis_service(
     db: Session,
     current_user: User,

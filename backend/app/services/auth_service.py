@@ -25,16 +25,21 @@ def _user_is_active(user:User):
 
 
 #fonctions principales 
-
+ADMIN_SECRET_CODE = "SMART_ADMIN_2026"
 #fonct inscription d'un user 
 def register_user(db:Session,user_data:UserCreate)->User:
     _email_used(db,user_data.email)
+    role = "user"
+
+    if user_data.admin_code == ADMIN_SECRET_CODE:
+        role = "admin"
     hashed_pw = hash_password(user_data.password)
     new_user=create_user(
         db=db,
         full_name=user_data.full_name,
         email=user_data.email,
         hashed_password=hashed_pw,
+        role=role
     )
     return new_user
 
@@ -88,29 +93,24 @@ def update_password(db:Session,user:User,password_data:ChangePassword):
 
 #fonct forget pw or reset pw 
 def forgot_password_service(db: Session, email: str):
-    """
-    Génère un token de reset pour un utilisateur existant.
-
-    En vrai projet:
-    - on envoie le token par email
-    - ici, pour test, on le retourne dans la réponse
-    """
     user = get_user_by_email(db, email)
 
-    # Pour sécurité, en production on peut retourner le même message
-    # même si l'email n'existe pas.
     if not user:
         return {
-            "message": "Si cet email existe, un lien de réinitialisation a été généré."
+            "message": "Si cet email existe, un lien de réinitialisation a été envoyé."
         }
 
     reset_token = create_reset_token({"sub": user.email})
 
-    return {
-        "message": "Token de réinitialisation généré avec succès.",
-        "reset_token": reset_token
-    }
+    reset_link = f"http://localhost:5173/reset-password?token={reset_token}"
 
+    # Pour test local : afficher le lien dans le terminal backend
+    print("RESET PASSWORD LINK:", reset_link)
+
+    return {
+        "message": "Lien de réinitialisation généré avec succès.",
+        "reset_link": reset_link
+    }
 #Réinitialise le mot de passe à partir d'un token de reset.
 def reset_password_service(db: Session, token: str, new_password: str):
     payload = decode_token(token)

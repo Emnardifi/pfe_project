@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     full_name: str
     email: EmailStr
     password: str
+    admin_code: Optional[str] = None
 
 # données retournées par le backend pour afficher un utilisateur
 class UserResponse(BaseModel):

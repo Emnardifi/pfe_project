@@ -44,9 +44,11 @@ def get_current_user(
     return user
 
 #fonct: verifier si user est admin
-def get_current_admin(current_user:User=Depends(get_current_user))->User:
+def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "admin":
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Accès refusé : administrateur uniquement"
-            )
+        )
+
+    return current_user

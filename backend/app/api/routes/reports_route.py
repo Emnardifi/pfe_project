@@ -20,7 +20,11 @@ from app.repository.report_repository import (
     update_report_status,
     get_report_by_analysis_id
 )
-
+from app.services.report_service import (
+    generate_report_for_analysis,
+    get_report_details,
+    delete_report_service
+)
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -155,18 +159,7 @@ def delete_report_exists(
     db: Session = Depends(get_bd),
     current_user: User = Depends(get_current_user)
 ):
-    report = get_report_by_id(db, report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Rapport introuvable.")
-    
-     # supprimer le fichier PDF du stockage s'il existe
-    if report.file_path and os.path.exists(report.file_path):
-        os.remove(report.file_path)
-        
-    delete_report(db,report)
-
-    return {"message": "Rapport supprimé avec succès."}
-
+    return delete_report_service(db, current_user, report_id)
 #route  Générer un rapport s'il n'existe pas 
 @router.post(
     "/analysis/{analysis_id}/generate-if-missing",

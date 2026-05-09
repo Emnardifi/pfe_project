@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from fastapi.responses import FileResponse
+from pathlib import Path
 from sqlalchemy.orm import Session
 import os
 
@@ -97,17 +98,30 @@ def get_heatmap_file(
     current_user: User = Depends(get_current_user)
 ):
     analysis = get_analysis_by_id(db, analysis_id)
+
     if not analysis:
         raise HTTPException(status_code=404, detail="Analyse introuvable.")
 
     if analysis.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Accès interdit.")
 
-    if not analysis.heatmap_path or not os.path.exists(analysis.heatmap_path):
-        raise HTTPException(status_code=404, detail="Fichier heatmap introuvable.")
+    if not analysis.heatmap_path:
+        raise HTTPException(status_code=404, detail="Chemin heatmap vide.")
 
-    return FileResponse(analysis.heatmap_path)
+    heatmap_path = analysis.heatmap_path.replace("\\", "/")
 
+    if heatmap_path.startswith("/"):
+        heatmap_path = heatmap_path[1:]
+
+    file_path = Path(heatmap_path)
+
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Fichier heatmap introuvable: {file_path}"
+        )
+
+    return FileResponse(file_path)
 #Voir image originale
 @router.get(
     "/{analysis_id}/image",
