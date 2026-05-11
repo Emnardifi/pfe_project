@@ -61,81 +61,137 @@ def _create_pdf(
     original_image_path: str,
     heatmap_path: str,
     created_at: datetime,
-    user
+    user,
 ):
+    def resolve(path):
+        if not path:
+            return None
+        for p in [path, os.path.join(os.getcwd(), path)]:
+            if os.path.isfile(p):
+                return p
+        return None
+
     pdf = FPDF()
     pdf.add_page()
+    pdf.set_margins(15, 10, 15)
+    W = 180  # largeur utile
 
-    pdf.set_fill_color(30, 144, 255)
+    # ── 1. Header ────────────────────────────────────────────────
+    pdf.set_fill_color(30, 100, 200)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 12, "Smart Medical Analysis Report", 0, 1, "C", True)
+    pdf.set_font("Arial", "B", 18)
+    pdf.cell(W, 14, "Smart Medical Analysis Report", border=0, ln=1, align="C", fill=True)
+    pdf.ln(4)
 
-    pdf.ln(5)
+    # ── 2. Infos patient ─────────────────────────────────────────
     pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(30, 7, "Patient:", ln=0)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 7, str(user.full_name), ln=1)
 
-    pdf.set_font("Arial", size=10)
-    pdf.cell(0, 6, f"Patient: {user.full_name}", ln=True)
-    pdf.cell(0, 6, f"Email: {user.email}", ln=True)
-    pdf.cell(0, 6, f"Created at: {created_at.strftime('%Y-%m-%d %H:%M')}", ln=True)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(30, 7, "Email:", ln=0)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 7, str(user.email), ln=1)
 
-    pdf.ln(5)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(30, 7, "Created at:", ln=0)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(0, 7, created_at.strftime("%Y-%m-%d %H:%M"), ln=1)
 
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Results", ln=True)
+    pdf.ln(3)
+    pdf.set_draw_color(180, 180, 180)
+    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+    pdf.ln(4)
 
-    pdf.set_font("Arial", size=12)
+    # ── 3. Results ───────────────────────────────────────────────
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Results", ln=1)
 
-    if prediction and prediction.lower() == "pneumonia":
-        pdf.set_text_color(255, 0, 0)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(30, 7, "Prediction:", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    if (prediction or "").lower() == "pneumonia":
+        pdf.set_text_color(200, 0, 0)
     else:
-        pdf.set_text_color(0, 128, 0)
-
-    pdf.cell(0, 8, f"Prediction: {prediction}", ln=True)
+        pdf.set_text_color(0, 150, 0)
+    pdf.cell(0, 7, (prediction or "").upper(), ln=1)
 
     pdf.set_text_color(0, 0, 0)
-    pdf.cell(0, 8, f"Confidence: {probability:.2%}", ln=True)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(30, 7, "Confidence:", ln=0)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 7, f"{probability:.2%}", ln=1)
+
+    pdf.ln(3)
+    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+    pdf.ln(4)
+
+    # ── 4. Images côte à côte ─────────────────────────────────────
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Images", ln=1)
+
+    IMG_W = 85
+    IMG_H = 65
+    x_left  = 15
+    x_right = 110
+    y_labels = pdf.get_y()
+
+    # Labels
+    pdf.set_font("Arial", "B", 9)
+    pdf.set_xy(x_left, y_labels)
+    pdf.cell(IMG_W, 6, "Original Image", align="C", ln=0)
+    pdf.set_xy(x_right, y_labels)
+    pdf.cell(IMG_W, 6, "Heatmap (AI Explanation)", align="C", ln=1)
+
+    y_imgs = pdf.get_y()
+
+    # Image gauche
+    real_orig = resolve(original_image_path)
+    if real_orig:
+        pdf.image(real_orig, x=x_left, y=y_imgs, w=IMG_W, h=IMG_H)
+    else:
+        pdf.set_xy(x_left, y_imgs)
+        pdf.set_font("Arial", "", 9)
+        pdf.cell(IMG_W, IMG_H, "Original image not found", border=1, align="C")
+
+    # Image droite
+    real_heat = resolve(heatmap_path)
+    if real_heat:
+        pdf.image(real_heat, x=x_right, y=y_imgs, w=IMG_W, h=IMG_H)
+    else:
+        pdf.set_xy(x_right, y_imgs)
+        pdf.set_font("Arial", "", 9)
+        pdf.cell(IMG_W, IMG_H, "Heatmap not found", border=1, align="C")
+
+    pdf.set_y(y_imgs + IMG_H + 6)
+
+    # ── 5. Interpretation ────────────────────────────────────────
+    pdf.set_font("Arial", "B", 13)
+    pdf.cell(0, 8, "Interpretation:", ln=1)
+
+    pdf.set_fill_color(235, 245, 255)
+    pdf.set_font("Arial", "", 10)
+    pdf.set_draw_color(180, 180, 180)
+    items = [
+        "[ R ]  Red zones indicate potential pneumonia regions",
+        "[ B ]  Blue zones indicate normal areas",
+        "[ - ]  Heatmap explains AI decision",
+    ]
+    for item in items:
+        pdf.cell(W, 8, item, border="B", ln=1, fill=True)
 
     pdf.ln(8)
 
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Images", ln=True)
-
-    real_original_path = _resolve_file_path(original_image_path)
-    real_heatmap_path = _resolve_file_path(heatmap_path)
-
-    if real_original_path:
-        pdf.image(real_original_path, x=10, w=90)
-    else:
-        pdf.set_font("Arial", size=10)
-        pdf.cell(90, 8, "Original image not found", border=1)
-
-    if real_heatmap_path:
-        pdf.image(real_heatmap_path, x=110, w=90)
-    else:
-        pdf.set_xy(110, pdf.get_y())
-        pdf.set_font("Arial", size=10)
-        pdf.cell(90, 8, "Heatmap not found", border=1)
-
-    pdf.ln(70)
-
-    pdf.set_font("Arial", size=10)
-    pdf.multi_cell(
-        0,
-        8,
-        "Interpretation:\n"
-        "- Red zones indicate potential pneumonia regions\n"
-        "- Blue zones indicate normal areas\n"
-        "- Heatmap explains AI decision"
-    )
-
-    pdf.ln(10)
-
+    # ── 6. Footer ────────────────────────────────────────────────
+    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+    pdf.ln(2)
     pdf.set_font("Arial", "I", 8)
-    pdf.cell(0, 10, "Smart Medical App - AI Powered Diagnosis", 0, 0, "C")
+    pdf.set_text_color(80, 80, 80)
+    pdf.cell(W, 8, "Smart Medical App - AI Powered Diagnosis", align="C")
 
     pdf.output(file_path)
-
 
 def generate_report_for_analysis(db: Session, current_user: User, analysis_id: int):
     analysis = get_analysis_by_id(db, analysis_id)
