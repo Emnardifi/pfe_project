@@ -1,147 +1,190 @@
 import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
-import { registerUser } from "../services/authService"
-import Button from "../components/common/Button"
-import Input from "../components/common/Input"
-import Card from "../components/common/Card"
+import { useNavigate, Link } from "react-router-dom"
 
-const Register = () => {
+import { registerUser } from "../services/authService"
+
+import Input from "../components/common/Input"
+import Button from "../components/common/Button"
+import Card from "../components/common/Card"
+import Loading from "../components/common/Loading"
+
+function Register() {
   const navigate = useNavigate()
 
-  const [form, setForm] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-    admin_code: "",
-  })
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [adminCode, setAdminCode] = useState("")
 
-  const [errors, setErrors] = useState({})
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   const [loading, setLoading] = useState(false)
-
-  const validate = () => {
-    let newErrors = {}
-
-    if (!form.full_name.trim()) {
-      newErrors.full_name = "Nom obligatoire"
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(form.email)) {
-      newErrors.email = "Email invalide"
-    }
-
-    if (form.password.length < 6) {
-      newErrors.password = "Mot de passe min 6 caractères"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    })
-
-    setErrors({
-      ...errors,
-      [e.target.name]: "",
-    })
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!validate()) return
+    setError("")
+    setSuccess("")
 
-    setLoading(true)
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password ||
+      !confirmPassword
+    ) {
+      setError("Veuillez remplir tous les champs")
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas")
+      return
+    }
 
     try {
-      await registerUser(form)
-      alert("Compte créé avec succès")
-      navigate("/login")
+      setLoading(true)
+
+      await registerUser({
+        full_name: name,
+        email: email,
+        password: password,
+        admin_code: adminCode,
+      })
+
+      setSuccess(
+        "Compte créé avec succès. Redirection vers la connexion..."
+      )
+
+      setTimeout(() => {
+        navigate("/login")
+      }, 1200)
+
     } catch (err) {
-      alert(err.response?.data?.detail || "Erreur serveur")
+      setError(
+        err.response?.data?.detail ||
+          "Erreur lors de la création du compte"
+      )
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <Card className="w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6">
+    <div className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-8">
+      <Card className="w-full max-w-lg rounded-2xl p-7 shadow-xl">
+        {/* Titre */}
+        <h1 className="text-center text-3xl font-bold text-slate-900">
           Créer un compte
-        </h2>
+        </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
-            <Input
-              label="Nom"
-              name="full_name"
-              value={form.full_name}
-              onChange={handleChange}
-            />
-            {errors.full_name && (
-              <p className="text-red-500 text-sm">
-                {errors.full_name}
-              </p>
-            )}
-          </div>
+        {/* Sous titre */}
+        <p className="mt-2 text-center text-base text-slate-600">
+          Rejoignez Smart Medical aujourd'hui
+        </p>
 
-          <div>
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm">
-                {errors.email}
-              </p>
-            )}
-          </div>
+        {/* Formulaire */}
+        <form
+          onSubmit={handleSubmit}
+          className="mt-6 space-y-1"
+        >
+          <Input
+            label="Nom"
+            name="name"
+            type="text"
+            placeholder="Votre nom complet"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
 
-          <div>
-            <Input
-              label="Password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-            />
-            {errors.password && (
-              <p className="text-red-500 text-sm">
-                {errors.password}
-              </p>
-            )}
-          </div>
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            placeholder="votre.email@exemple.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-          <div>
-            <Input
-              label="Code admin optionnel"
-              name="admin_code"
-              type="text"
-              value={form.admin_code}
-              onChange={handleChange}
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Laissez vide pour créer un compte utilisateur normal.
+          <Input
+            label="Mot de passe"
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <Input
+            label="Confirmer le mot de passe"
+            name="confirmPassword"
+            type="password"
+            placeholder="••••••••"
+            value={confirmPassword}
+            onChange={(e) =>
+              setConfirmPassword(e.target.value)
+            }
+          />
+
+          <Input
+            label="Code administrateur (optionnel)"
+            name="adminCode"
+            type="text"
+            placeholder="Laissez vide pour un compte utilisateur"
+            value={adminCode}
+            onChange={(e) =>
+              setAdminCode(e.target.value)
+            }
+          />
+
+          <p className="mb-4 text-sm text-slate-500">
+            Laissez vide pour créer un compte utilisateur standard.
+          </p>
+
+          {/* Message erreur */}
+          {error && (
+            <p className="mb-3 rounded-lg bg-red-50 p-3 text-center text-sm text-red-600">
+              {error}
             </p>
-          </div>
+          )}
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Chargement..." : "Créer"}
+          {/* Message succès */}
+          {success && (
+            <p className="mb-3 rounded-lg bg-green-50 p-3 text-center text-sm text-green-600">
+              {success}
+            </p>
+          )}
+
+          {loading && <Loading />}
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-xl py-2.5 font-semibold"
+          >
+            {loading
+              ? "Inscription..."
+              : "S'inscrire"}
           </Button>
         </form>
 
-        <p className="text-center mt-4 text-sm">
-          Déjà un compte ?{" "}
-          <Link to="/login" className="text-blue-600">
-            Login
+        {/* Séparateur */}
+        <div className="my-5 flex items-center gap-4">
+          <div className="h-px flex-1 bg-slate-300"></div>
+          <span className="text-slate-500">
+            Ou
+          </span>
+          <div className="h-px flex-1 bg-slate-300"></div>
+        </div>
+
+        {/* Login */}
+        <p className="text-center text-base text-slate-700">
+          Vous avez déjà un compte ?{" "}
+          <Link
+            to="/login"
+            className="font-medium text-blue-600 hover:underline"
+          >
+            Se connecter
           </Link>
         </p>
       </Card>
