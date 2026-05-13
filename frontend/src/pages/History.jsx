@@ -40,33 +40,37 @@ const History = () => {
   const filteredAnalyses = analyses.filter((analysis) => {
     const matchSearch =
       search === "" ||
-      analysis.prediction
-        ?.toLowerCase()
-        .includes(search.toLowerCase())
+      String(analysis.id).includes(search) ||
+      analysis.prediction?.toLowerCase().includes(search.toLowerCase())
 
     const matchPrediction =
-      predictionFilter === "all" ||
-      analysis.prediction === predictionFilter
+      predictionFilter === "all" || analysis.prediction === predictionFilter
 
     const matchDate =
-      dateFilter === "" ||
-      analysis.created_at?.startsWith(dateFilter)
+      dateFilter === "" || analysis.created_at?.startsWith(dateFilter)
 
     return matchSearch && matchPrediction && matchDate
   })
 
   const filteredReports = reports.filter((report) => {
+    const linkedAnalysis = analyses.find(
+      (analysis) => analysis.id === report.analysis_id
+    )
+
     const matchSearch =
       search === "" ||
-      report.status
-        ?.toLowerCase()
-        .includes(search.toLowerCase())
+      String(report.id).includes(search) ||
+      String(report.analysis_id).includes(search) ||
+      report.status?.toLowerCase().includes(search.toLowerCase()) ||
+      linkedAnalysis?.prediction?.toLowerCase().includes(search.toLowerCase())
+
+    const matchPrediction =
+      predictionFilter === "all" || linkedAnalysis?.prediction === predictionFilter
 
     const matchDate =
-      dateFilter === "" ||
-      report.generated_at?.startsWith(dateFilter)
+      dateFilter === "" || report.generated_at?.startsWith(dateFilter)
 
-    return matchSearch && matchDate
+    return matchSearch && matchPrediction && matchDate
   })
 
   const showOriginalImage = async (id) => {
@@ -88,11 +92,7 @@ const History = () => {
   }
 
   const deleteAnalysis = async (id) => {
-    const confirmDelete = window.confirm(
-      "Voulez-vous supprimer cette analyse ?"
-    )
-
-    if (!confirmDelete) return
+    if (!window.confirm("Voulez-vous supprimer cette analyse ?")) return
 
     try {
       await removeAnalysis(id)
@@ -104,11 +104,7 @@ const History = () => {
   }
 
   const deletePdf = async (reportId) => {
-    const confirmDelete = window.confirm(
-      "Voulez-vous supprimer ce rapport ?"
-    )
-
-    if (!confirmDelete) return
+    if (!window.confirm("Voulez-vous supprimer ce rapport ?")) return
 
     try {
       await handleDelete(reportId)
@@ -122,28 +118,78 @@ const History = () => {
   return (
     <div className="space-y-6">
       <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-emerald-500 p-6 text-white">
-        <h1 className="text-2xl font-bold">
-          Historique
-        </h1>
-
+        <h1 className="text-2xl font-bold">Historique</h1>
         <p className="mt-1 text-sm opacity-90">
           Consultez vos analyses et rapports PDF.
         </p>
       </div>
 
-      <Card>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setActiveTab("analyses")}
-          >
-            Analyses
-          </Button>
+      {error && (
+        <Card>
+          <p className="text-sm text-red-600">
+            Erreur lors du chargement de l’historique.
+          </p>
+        </Card>
+      )}
 
-          <Button
-            onClick={() => setActiveTab("reports")}
-          >
-            Rapports
-          </Button>
+      <Card>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex gap-3">
+            <Button
+              onClick={() => setActiveTab("analyses")}
+              className={
+                activeTab === "analyses"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-slate-500 hover:bg-slate-600"
+              }
+            >
+              Analyses
+            </Button>
+
+            <Button
+              onClick={() => setActiveTab("reports")}
+              className={
+                activeTab === "reports"
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-slate-500 hover:bg-slate-600"
+              }
+            >
+              Rapports
+            </Button>
+          </div>
+
+          <div className="flex flex-col gap-3 md:flex-row">
+            <input
+              type="text"
+              placeholder={
+                activeTab === "analyses"
+                  ? "Rechercher par id, prédiction"
+                  : "Rechercher par rapport, statut"
+              }
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-blue-500 md:w-72"
+            />
+
+            {activeTab === "analyses" && (
+              <select
+                value={predictionFilter}
+                onChange={(e) => setPredictionFilter(e.target.value)}
+                className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-blue-500 md:w-64"
+              >
+                <option value="all">Toutes les prédictions</option>
+                <option value="NORMAL">Normal</option>
+                <option value="PNEUMONIA">Pneumonie</option>
+              </select>
+            )}
+
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 text-sm outline-none focus:border-blue-500 md:w-52"
+            />
+          </div>
         </div>
       </Card>
 
@@ -151,57 +197,94 @@ const History = () => {
 
       {activeTab === "analyses" && (
         <div className="grid gap-5">
-          {filteredAnalyses.map((analysis, index) => (
-            <AnalysisCard
-              key={analysis.id}
-              analysis={analysis}
-              analysisNumber={index + 1}
-              onDetails={setSelectedItem}
-              onShowOriginalImage={showOriginalImage}
-              onShowHeatmap={showHeatmap}
-              onViewPdf={handleViewByAnalysis}
-              onDelete={deleteAnalysis}
-            />
-          ))}
+          {filteredAnalyses.length === 0 ? (
+            <Card>
+              <p className="text-slate-500">Aucune analyse trouvée.</p>
+            </Card>
+          ) : (
+            filteredAnalyses.map((analysis, index) => (
+              <AnalysisCard
+                key={analysis.id}
+                analysis={analysis}
+                analysisNumber={index + 1}
+                onDetails={setSelectedItem}
+                onShowOriginalImage={showOriginalImage}
+                onShowHeatmap={showHeatmap}
+                onViewPdf={handleViewByAnalysis}
+                onDelete={deleteAnalysis}
+              />
+            ))
+          )}
         </div>
       )}
 
       {activeTab === "reports" && (
         <div className="grid gap-5">
-          {filteredReports.map((report, index) => {
-            const linkedAnalysis =
-              analyses.find(
+          {filteredReports.length === 0 ? (
+            <Card>
+              <p className="text-slate-500">Aucun rapport trouvé.</p>
+            </Card>
+          ) : (
+            filteredReports.map((report, index) => {
+              const linkedAnalysis = analyses.find(
                 (a) => a.id === report.analysis_id
               )
 
-            return (
-              <ReportCard
-                key={report.id}
-                report={report}
-                analysis={linkedAnalysis}
-                reportNumber={index + 1}
-                analysisNumber={index + 1}
-                handleView={handleView}
-                handleDownload={handleDownload}
-                handleDelete={deletePdf}
-              />
-            )
-          })}
+              return (
+                <ReportCard
+                  key={report.id}
+                  report={report}
+                  analysis={linkedAnalysis}
+                  reportNumber={index + 1}
+                  analysisNumber={index + 1}
+                  handleView={handleView}
+                  handleDownload={handleDownload}
+                  handleDelete={deletePdf}
+                />
+              )
+            })
+          )}
         </div>
       )}
 
       {selectedItem && (
         <Card>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-800">
+              Détails de l’analyse
+            </h2>
+
+            <Button
+              onClick={() => setSelectedItem(null)}
+              className="bg-slate-500 hover:bg-slate-600"
+            >
+              Fermer
+            </Button>
+          </div>
+
           <AnalysisResult result={selectedItem} />
         </Card>
       )}
 
       {selectedImage && (
         <Card>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-800">
+              {selectedImage.title}
+            </h2>
+
+            <Button
+              onClick={() => setSelectedImage(null)}
+              className="bg-slate-500 hover:bg-slate-600"
+            >
+              Fermer
+            </Button>
+          </div>
+
           <img
             src={selectedImage.url}
             alt={selectedImage.title}
-            className="rounded-xl"
+            className="max-h-[600px] w-full rounded-xl border object-contain"
           />
         </Card>
       )}

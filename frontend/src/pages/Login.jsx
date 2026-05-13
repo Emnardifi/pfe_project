@@ -1,176 +1,164 @@
-// Import des hooks React pour gérer l'état
 import { useState } from "react"
-
-// Import pour la navigation entre les pages + lien vers register
 import { useNavigate, Link } from "react-router-dom"
-
-// Import du hook personnalisé pour utiliser AuthContext
 import { useAuth } from "../hooks/useAuth"
-
-// Import des composants réutilisables
 import Input from "../components/common/Input"
 import Button from "../components/common/Button"
 import Card from "../components/common/Card"
-import Loading from "../components/common/Loading"
 
-function Login() {
+const Login = () => {
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  })
 
-  // State pour stocker l'email saisi par l'utilisateur
-  const [email, setEmail] = useState("")
-
-  // State pour stocker le mot de passe
-  const [password, setPassword] = useState("")
-
-  // State pour afficher les messages d'erreur
-  const [error, setError] = useState("")
-
-  // State pour gérer le loading du formulaire
+  const [showPassword, setShowPassword] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [serverError, setServerError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  // Hook pour rediriger vers une autre page
+  const { login } = useAuth()//Il permet d’envoyer l’email et le password au backend.
   const navigate = useNavigate()
 
-  // Récupération de la fonction login depuis AuthContext
-  const { login } = useAuth()
+  const validate = () => {
+    let newErrors = {}
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-  // Fonction exécutée quand on soumet le formulaire
-  const handleSubmit = async (e) => {
-
-    // Empêche le rechargement de la page
-    e.preventDefault()
-
-    // Réinitialise les erreurs
-    setError("")
-
-    // Vérifie si les champs sont vides
-    if (!email || !password) {
-      setError("Veuillez remplir tous les champs")
-      return
+    if (!emailRegex.test(form.email)) {
+      newErrors.email = "Email invalide"
     }
 
+    if (form.password.length < 6) {
+      newErrors.password = "Mot de passe invalide"
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+  // fonction s'exécute à chaque fois que user écrit dans un champ.
+  const handleChange = (e) => {
+    setForm({
+      ...form,//garde les anciennes valeurs.
+      [e.target.name]: e.target.value,
+    })
+
+    setErrors({
+      ...errors,
+      [e.target.name]: "",
+    })
+
+    setServerError("")
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()//empêche la page de se recharger.
+
+    if (!validate()) return
+
+    setLoading(true)
+
     try {
+    const user = await login(form.email, form.password)
 
-      // Active le loading
-      setLoading(true)
-
-      // Appel de la fonction login depuis AuthContext
-      const userData = await login(email, password)
-
-      // Si login échoue
-      if (!userData) {
-        setError("Email ou mot de passe incorrect")
-        return
+    if (user) {
+      // si admin -> dashboard admin
+      if (user.role === "admin") {
+        navigate("/admin-dashboard")
       }
 
-      // Redirection vers dashboard
-      navigate("/dashboard")
-
+      // sinon user normal
+      else {
+        navigate("/dashboard")
+      }
+    } else {
+      setServerError("Email ou mot de passe incorrect")
+    }
     } catch (err) {
-
-      // Message erreur
-      setError("Email ou mot de passe incorrect")
-
+      setServerError("Compte inexistant ou erreur serveur")
     } finally {
-
-      // Désactive loading
       setLoading(false)
     }
   }
 
   return (
-
-    // Container principal centré
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
-
-      {/* Carte contenant le formulaire */}
-      <Card className="w-full max-w-xl rounded-2xl shadow-xl p-10">
-
-        {/* Titre */}
-        <h1 className="text-4xl font-bold text-center text-slate-900">
+    <div className="min-h-screen flex justify-center items-center bg-gray-100 px-4">
+      <Card className="w-full max-w-md">
+        <h2 className="text-2xl font-bold text-center mb-6">
           Connexion
-        </h1>
+        </h2>
 
-        {/* Sous-titre */}
-        <p className="text-center text-slate-600 mt-4 text-lg">
-          Accédez à votre compte Smart Medical
-        </p>
+        {serverError && (
+          <div className="mb-4 bg-red-100 text-red-700 p-2 rounded text-sm">
+            {serverError}
+          </div>
+        )}
 
-        {/* Formulaire */}
-        <form onSubmit={handleSubmit} className="mt-10">
-
-          {/* Champ Email */}
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            placeholder="votre.email@exemple.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          {/* Champ Mot de passe */}
-          <Input
-            label="Mot de passe"
-            name="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          {/* Lien mot de passe oublié */}
-          <div className="flex justify-end mb-4">
-            <Link
-              to="/forgot-password"
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Mot de passe oublié ?
-            </Link>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <Input
+              label="Email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm">{errors.email}</p>
+            )}
           </div>
 
-          {/* Affichage erreur */}
-          {error && (
-            <p className="text-red-600 text-sm text-center mb-4">
-              {error}
-            </p>
-          )}
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-sm font-medium text-gray-700">
+                Password
+              </label>
 
-          {/* Animation loading */}
-          {loading && <Loading />}
+              <Link
+                to="/forgot-password"
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Mot de passe oublié ?
+              </Link>
+            </div>
 
-          {/* Bouton login */}
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 rounded-xl font-semibold"
-          >
+            <div className="relative">
+              <input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={handleChange}
+                className="w-full px-4 py-2 pr-20 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-blue-600"
+              >
+                {showPassword ? "Cacher" : "Afficher"}
+              </button>
+            </div>
+
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password}
+              </p>
+            )}
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Connexion..." : "Se connecter"}
           </Button>
-
         </form>
 
-        {/* Séparateur visuel */}
-        <div className="flex items-center gap-4 my-8">
-          <div className="flex-1 h-px bg-slate-300"></div>
-          <span className="text-slate-500">Ou</span>
-          <div className="flex-1 h-px bg-slate-300"></div>
-        </div>
-
-        {/* Lien vers Register */}
-        <p className="text-center text-slate-700 text-lg">
-          Vous n'avez pas de compte ?{" "}
-          <Link
-            to="/register"
-            className="text-blue-600 font-medium hover:underline"
-          >
+        <p className="text-center mt-4 text-sm text-gray-500">
+          Pas de compte ?{" "}
+          <Link to="/register" className="text-blue-600 hover:underline">
             Créer un compte
           </Link>
         </p>
-
       </Card>
     </div>
   )
 }
 
-// Export du composant
 export default Login
