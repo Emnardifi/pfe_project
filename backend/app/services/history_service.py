@@ -12,14 +12,14 @@ def _analysis_exists(analysis):
     if not analysis:
         raise  HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="analysis not found!"
+            detail="analyse  introuvable!"
         )
         
 def _analysis_belongs_to_user(analysis,current_user:User):
     if current_user.id!=analysis.user_id and current_user.role != "admin":
         raise  HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=" this analysis don't belongs to this user!"
+            detail=" Cette analyse n'appartient pas à cet utilisateur.!"
         )
 
 #fonct principale

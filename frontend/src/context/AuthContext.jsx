@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem("token"))
   const [loading, setLoading] = useState(true)
 
-  // 🔹 Charger user si token existe
+  // Charger user si token existe
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
     loadUser()
   }, [token])
 
-  // 🔹 LOGIN
+  //  LOGIN
   const login = async (email, password) => {
     try {
       const data = await loginUser(email, password)

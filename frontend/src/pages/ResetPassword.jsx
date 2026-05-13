@@ -1,85 +1,60 @@
 import { useState } from "react"
-import { Link } from "react-router-dom"
-import { forgotPassword } from "../services/authService"
-import Card from "../components/common/Card"
-import Input from "../components/common/Input"
-import Button from "../components/common/Button"
+import { useSearchParams, Link } from "react-router-dom"
+import { resetPassword } from "../services/authService"
 
-const ForgotPassword = () => {
-  const [email, setEmail] = useState("")
+const ResetPassword = () => {
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get("token")
+
+  const [newPassword, setNewPassword] = useState("")
   const [message, setMessage] = useState("")
-  const [resetLink, setResetLink] = useState("")
   const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setMessage("")
-    setResetLink("")
     setError("")
-    setLoading(true)
 
     try {
-      const data = await forgotPassword(email)
-
-      setMessage(data.message || "Lien de réinitialisation généré.")
-      setResetLink(data.reset_link || "")
+      await resetPassword(token, newPassword)
+      setMessage("Mot de passe modifié avec succès.")
     } catch (err) {
-      setError(err.response?.data?.detail || "Erreur lors de la demande.")
-    } finally {
-      setLoading(false)
+      setError(err.response?.data?.detail || "Erreur réinitialisation.")
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <Card className="w-full max-w-md">
+      <div className="bg-white p-6 rounded-xl shadow w-full max-w-md">
         <h2 className="text-2xl font-bold text-center mb-4">
-          Mot de passe oublié
+          Réinitialiser le mot de passe
         </h2>
 
-        {message && (
-          <div className="bg-green-100 text-green-700 p-3 rounded mb-4 text-sm">
-            <p>{message}</p>
-
-            {resetLink && (
-              <a
-                href={resetLink}
-                className="block mt-2 text-blue-600 underline break-all"
-              >
-                Cliquer ici pour réinitialiser
-              </a>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <p className="bg-red-100 text-red-700 p-2 rounded mb-4 text-sm">
-            {error}
-          </p>
-        )}
+        {message && <p className="text-green-600 mb-3">{message}</p>}
+        {error && <p className="text-red-600 mb-3">{error}</p>}
 
         <form onSubmit={handleSubmit}>
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+          <label>Nouveau mot de passe</label>
+          <input
+            type="password"
+            className="w-full border p-2 rounded mb-4"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
           />
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Envoi..." : "Envoyer"}
-          </Button>
+          <button className="w-full bg-blue-600 text-white p-2 rounded">
+            Réinitialiser
+          </button>
         </form>
 
-        <p className="text-center mt-4 text-sm">
-          <Link to="/login" className="text-blue-600 hover:underline">
+        <p className="text-center mt-4">
+          <Link to="/login" className="text-blue-600">
             Retour à la connexion
           </Link>
         </p>
-      </Card>
+      </div>
     </div>
   )
 }
 
-export default ForgotPassword
+export default ResetPassword

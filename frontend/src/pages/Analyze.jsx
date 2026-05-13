@@ -1,14 +1,14 @@
 import { useState } from "react"
+
 import ImageUploader from "../components/analysis/ImageUploader"
 import AnalysisResult from "../components/analysis/AnalysisResult"
+import AnalysisCard from "../components/analysis/AnalysisCard"
+
 import Loading from "../components/common/Loading"
 import Card from "../components/common/Card"
 import Button from "../components/common/Button"
+
 import { useAnalyses } from "../hooks/useAnalyses"
-import {
-  getHeatmapBlob,
-  getOriginalImageBlob,
-} from "../services/analysisService"
 
 const Analyze = () => {
   const {
@@ -17,6 +17,8 @@ const Analyze = () => {
     error,
     uploadAndPredict,
     removeAnalysis,
+    getOriginalImage,
+    getHeatmapImage,
   } = useAnalyses()
 
   const [result, setResult] = useState(null)
@@ -34,12 +36,8 @@ const Analyze = () => {
 
   const showOriginalImage = async (id) => {
     try {
-      const imageUrl = await getOriginalImageBlob(id)
-
-      setSelectedImage({
-        title: `Image originale - Analyse #${id}`,
-        url: imageUrl,
-      })
+      const image = await getOriginalImage(id)
+      setSelectedImage(image)
     } catch (err) {
       console.error(err)
       alert("Impossible d'afficher l'image originale")
@@ -48,13 +46,8 @@ const Analyze = () => {
 
   const showHeatmap = async (id) => {
     try {
-      console.log("ID heatmap =", id)
-      const imageUrl = await getHeatmapBlob(id)
-
-      setSelectedImage({
-        title: `Heatmap - Analyse #${id}`,
-        url: imageUrl,
-      })
+      const image = await getHeatmapImage(id)
+      setSelectedImage(image)
     } catch (err) {
       console.error(err)
       alert("Impossible d'afficher la heatmap")
@@ -84,7 +77,6 @@ const Analyze = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-emerald-500 p-6 text-white">
         <h1 className="text-2xl font-bold">Analyse médicale</h1>
         <p className="mt-1 text-sm opacity-90">
@@ -92,7 +84,6 @@ const Analyze = () => {
         </p>
       </div>
 
-      {/* Upload */}
       <Card>
         <h2 className="mb-4 text-lg font-bold text-slate-800">
           Nouvelle analyse
@@ -109,25 +100,8 @@ const Analyze = () => {
         )}
       </Card>
 
-      {/* Résultat direct après upload */}
-      {result && (
-        <Card>
-          <h2 className="mb-4 text-lg font-bold text-slate-800">Résultat</h2>
+      <AnalysisResult result={result} />
 
-          <p className="text-sm text-slate-700">
-            Prédiction :{" "}
-            <span className="font-bold text-red-600">
-              {result.prediction}
-            </span>
-          </p>
-
-          <p className="mt-2 text-sm text-slate-700">
-            Probabilité : {Math.round(result.probability * 100)}%
-          </p>
-        </Card>
-      )}
-
-      {/* Historique */}
       <Card>
         <h2 className="mb-4 text-lg font-bold text-slate-800">
           Mes analyses récentes
@@ -139,66 +113,21 @@ const Analyze = () => {
           </p>
         ) : (
           <div className="space-y-4">
-            {analyses.map((analysis) => (
-              <div
+            {analyses.map((analysis, index) => (
+              <AnalysisCard
                 key={analysis.id}
-                className="flex flex-col gap-4 rounded-xl border p-4 md:flex-row md:items-center md:justify-between"
-              >
-                <div>
-                  <p className="font-semibold text-slate-800">
-                    Analyse #{analysis.id}
-                  </p>
-
-                  <p className="text-sm text-slate-600">
-                    Prédiction :{" "}
-                    <span
-                      className={
-                        analysis.prediction === "PNEUMONIA"
-                          ? "font-bold text-red-600"
-                          : "font-bold text-green-600"
-                      }
-                    >
-                      {analysis.prediction}
-                    </span>
-                  </p>
-
-                  <p className="text-sm text-slate-500">
-                    Probabilité :{" "}
-                    {analysis.probability
-                      ? `${Math.round(analysis.probability * 100)}%`
-                      : "Non disponible"}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => showOriginalImage(analysis.id)}
-                    className="bg-slate-600 hover:bg-slate-700"
-                  >
-                    Image originale
-                  </Button>
-
-                  <Button
-                    onClick={() => showHeatmap(analysis.id)}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
-                    Heatmap
-                  </Button>
-
-                  <Button
-                    onClick={() => handleDelete(analysis.id)}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Supprimer
-                  </Button>
-                </div>
-              </div>
+                analysis={analysis}
+                analysisNumber={index + 1}
+                showDetails={true}
+                onShowOriginalImage={showOriginalImage}
+                onShowHeatmap={showHeatmap}
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}
       </Card>
 
-      {/* Affichage image ou heatmap */}
       {selectedImage && (
         <Card>
           <div className="mb-4 flex items-center justify-between gap-4">

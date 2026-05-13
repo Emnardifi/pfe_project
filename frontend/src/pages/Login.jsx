@@ -16,7 +16,7 @@ const Login = () => {
   const [serverError, setServerError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const { login } = useAuth()
+  const { login } = useAuth()//Il permet d’envoyer l’email et le password au backend.
   const navigate = useNavigate()
 
   const validate = () => {
@@ -34,10 +34,10 @@ const Login = () => {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
-
+  // fonction s'exécute à chaque fois que user écrit dans un champ.
   const handleChange = (e) => {
     setForm({
-      ...form,
+      ...form,//garde les anciennes valeurs.
       [e.target.name]: e.target.value,
     })
 
@@ -50,7 +50,7 @@ const Login = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault()//empêche la page de se recharger.
 
     if (!validate()) return
 

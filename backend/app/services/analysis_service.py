@@ -22,7 +22,7 @@ def _extract_extension(filename: str):
     if "." not in filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file name"
+            detail="nom de file invalide"
         )
     return filename.rsplit(".", 1)[1].lower()
 
@@ -32,7 +32,7 @@ def _validate_image_extension(extension: str):
     if extension not in extension_list:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Only jpg, jpeg and png files are allowed"
+            detail="seulement jpg, jpeg et png !"
         )
 
 
@@ -53,7 +53,7 @@ def _save_upload_file(upload_file, file_path: str):
         )
 
 
-def _run_ai(image_path: str) -> tuple[str, float, str]:
+def _run_ai(image_path: str) -> tuple[str, float, str | None]:
     try:
         preprocessed_image = preprocess_image(image_path)
         prediction_data = predict_image(preprocessed_image)
@@ -61,9 +61,12 @@ def _run_ai(image_path: str) -> tuple[str, float, str]:
         prediction = prediction_data["prediction"]
         probability = prediction_data["probability"]
 
-        os.makedirs("heatmaps", exist_ok=True)
-        heatmap_path = generate_gradcam(image_path, save_dir="heatmaps")
-        heatmap_url = "/" + heatmap_path.replace("\\", "/")
+        heatmap_url = None
+
+        if prediction == "PNEUMONIA":
+            os.makedirs("heatmaps", exist_ok=True)
+            heatmap_path = generate_gradcam(image_path, save_dir="heatmaps")
+            heatmap_url = "/" + heatmap_path.replace("\\", "/")
 
         return prediction, probability, heatmap_url
 
@@ -72,6 +75,9 @@ def _run_ai(image_path: str) -> tuple[str, float, str]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"ai prediction failed: {str(e)}"
         )
+        
+        
+        
 def create_analysis_service(
     db: Session,
     current_user: User,
@@ -109,7 +115,7 @@ def create_analysis_service(
     )
 
     return {
-        "message": "analysis completed successfully",
+        "message": "Analyse terminée avec succès.",
         "analysis_id": analysis.id,
         "prediction": analysis.prediction,
         "probability": analysis.probability,
@@ -123,7 +129,7 @@ def get_analysis_details(db: Session, analysis_id: int):
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="analysis not found!"
+            detail="analyse introuvable!"
         )
     return analysis
 
@@ -137,7 +143,7 @@ def get_image_details(db: Session, image_id: int):
     if not image:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="image not found!"
+            detail="image introuvable!"
         )
     return image
 

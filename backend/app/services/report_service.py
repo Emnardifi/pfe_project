@@ -37,7 +37,7 @@ def _analysis_exists(analysis):
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Analysis not found!"
+            detail="analyse introuvable!"
         )
 
 
@@ -45,7 +45,7 @@ def _analysis_belongs_to_user(analysis, current_user: User):
     if current_user.id != analysis.user_id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This analysis doesn't belong to this user!"
+            detail="Cette analyse n'appartient pas à cet utilisateur.!"
         )
 
 
@@ -201,7 +201,7 @@ def generate_report_for_analysis(db: Session, current_user: User, analysis_id: i
     existing_report = get_report_by_analysis_id(db, analysis_id)
     if existing_report:
         return {
-            "message": "Report already exists!",
+            "message": "Le rapport existe déjà.!",
             "report": existing_report
         }
 
@@ -227,7 +227,7 @@ def generate_report_for_analysis(db: Session, current_user: User, analysis_id: i
     )
 
     return {
-        "message": "Report generated successfully!",
+        "message": "Rapport généré avec succès.!",
         "report": report
     }
 
@@ -242,7 +242,7 @@ def get_report_details(db: Session, analysis_id: int, current_user: User):
     if not report:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Report not found!"
+            detail="Report introuvable!"
         )
 
     return report

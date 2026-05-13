@@ -20,7 +20,7 @@ def _user_is_active(user:User):
     if not user.is_active:
         raise  HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="inactive account"
+            detail="compte non activé"
         )
 
 
@@ -49,7 +49,7 @@ def login_user(db: Session, email: str, password: str) -> dict: #return : un fic
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="mot de passe ou email invalide"
         )
 
     check_pw = verify_password(password, user.hashed_password)
@@ -57,7 +57,7 @@ def login_user(db: Session, email: str, password: str) -> dict: #return : un fic
     if not check_pw:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
+            detail="mot de passe ou email invalide"
         )
         
     _user_is_active(user)
@@ -85,11 +85,11 @@ def update_password(db:Session,user:User,password_data:ChangePassword):
     if not check_pw :
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="old password is incorrect!"
+            detail="L’ancien mot de passe est incorrect."
         )
     new_hashed_password=hash_password(password_data.new_password)
     update_user_password(db,user,new_hashed_password)
-    return {"message":"password updated successfully"}
+    return {"message":"Mot de passe modifié avec succès."}
 
 #fonct forget pw or reset pw 
 def forgot_password_service(db: Session, email: str):
